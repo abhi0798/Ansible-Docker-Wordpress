@@ -1,0 +1,7 @@
+- hosts: wordpress
+  #remote_user: "{{ instance_user }}"
+  become: yes
+  roles:
+  - python
+  - docker
+  - wordpress-docker

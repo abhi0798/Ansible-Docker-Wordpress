@@ -1,0 +1,73 @@
+- name: directory setup
+  file:
+    path: /home/ubuntu/docker-wordpress/{{ item }}
+    state: directory
+    owner: "ubuntu"
+    group: "ubuntu"
+    recurse: yes
+    mode: 0755
+  with_items:
+  - wordpress
+  - wp-db-data
+  - nginx
+  - logs/nginx
+- name: deploy WordPress Nginx virtual host
+  template:
+    src: nginx.j2
+    dest: "/home/ubuntu/docker-wordpress/nginx/wordpress.conf"
+    owner: "ubuntu"
+    group: "ubuntu"
+    mode: 0644
+
+- name: install DB
+  docker_container:
+    name: mysql
+    image: mysql:5.7
+    ports: '3306:3306'
+    state: started
+    restart: yes
+    volumes:
+    - /home/ubuntu/compose-wordpress/wp-db-data:/var/lib/mysql
+    env:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+
+- name: install wordpress
+  docker_container:
+    name: wordpress
+    image: wordpress:5.1.1-fpm-alpine 
+    ports: '9000:9000'
+    state: started
+    restart: yes
+    volumes:
+    - /home/ubuntu/compose-wordpress/wordpress:/var/www/html
+    env:
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_TABLE_PREFIX: wp_
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_PASSWORD: wordpress
+    links: 
+    - mysql
+
+- name: install webserver
+  docker_container:
+    name: nginx
+    image: nginx
+    state: started
+    # command: nginx -g "daemon off"
+    # command: service nginx start
+    ports: '80:80'
+    restart: yes
+    volumes:
+    - /home/ubuntu/compose-wordpress/nginx:/etc/nginx/conf.d
+    - /home/ubuntu/compose-wordpress/logs/nginx:/var/log/nginx
+    - /home/ubuntu/compose-wordpress/wordpress:/var/www/html
+    links:
+    - wordpress
+
+- name: giving some time for project (all 3 containers) to start-up
+  pause:
+    seconds: 10

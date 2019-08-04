@@ -1,0 +1,12 @@
+- name: Install python
+  apt:
+    name: python3
+    state: present
+    update-cache: yes
+
+- name: Install python-pip
+  apt:
+    name: python-pip
+    state: present
+    update-cache: yes
+
